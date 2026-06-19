@@ -396,9 +396,29 @@ section h2 {
     margin: 0 auto;
 }
 
-.login-method { margin-top: 20px; }
-.login-method h3 { margin-bottom: 10px; }
-.login-method ol { margin: 10px 0 16px 20px; color: #555; }
+.login-tabs {
+    display: flex;
+    gap: 0;
+    margin: 20px 0 16px;
+    border-bottom: 2px solid #eee;
+}
+
+.login-tab {
+    padding: 10px 24px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1em;
+    color: #888;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.login-tab:hover { color: #fb7299; }
+.login-tab.active { color: #fb7299; border-bottom-color: #fb7299; font-weight: 600; }
+
+.login-tab-content ol { margin: 10px 0 16px 20px; color: #555; }
 
 .form-group {
     margin-bottom: 14px;

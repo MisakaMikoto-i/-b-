@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录B站 - 歌单转BV收藏夹</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=6">
 </head>
 <body>
     <div class="container">
@@ -16,8 +16,20 @@
                 <h2>登录B站</h2>
                 <p>需要B站登录态才能创建收藏夹和添加视频。凭证仅保存在本地。</p>
 
-                <div class="login-method">
-                    <h3>方式一：手动输入Cookies（推荐）</h3>
+                <div class="login-tabs">
+                    <button class="login-tab active" onclick="switchTab('qrcode')">扫码登录</button>
+                    <button class="login-tab" onclick="switchTab('manual')">手动输入</button>
+                </div>
+
+                <div id="tab-qrcode" class="login-tab-content">
+                    <div id="qr-container" style="text-align:center; padding: 20px 0;">
+                        <button id="btn-qr-login" class="btn btn-primary" onclick="startQrLogin()">生成二维码</button>
+                        <div id="qr-image" style="margin: 16px 0;"></div>
+                        <div id="qr-status" style="color: #666; font-size: 0.9em;"></div>
+                    </div>
+                </div>
+
+                <div id="tab-manual" class="login-tab-content" style="display:none">
                     <ol>
                         <li>打开 <a href="https://www.bilibili.com" target="_blank">bilibili.com</a> 并登录</li>
                         <li>按 F12 打开开发者工具 → Application → Cookies</li>
@@ -46,5 +58,66 @@
             </section>
         </main>
     </div>
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.login-tab-content').forEach(c => c.style.display = 'none');
+            document.getElementById('tab-' + tab).style.display = '';
+            event.target.classList.add('active');
+        }
+
+        let qrPollInterval = null;
+
+        async function startQrLogin() {
+            const btn = document.getElementById('btn-qr-login');
+            const imgDiv = document.getElementById('qr-image');
+            const statusDiv = document.getElementById('qr-status');
+
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            statusDiv.textContent = '';
+
+            try {
+                const resp = await fetch('/login/qrcode', { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || '生成失败');
+
+                imgDiv.innerHTML = `<img src="${data.image}" width="200" height="200" style="border:1px solid #ddd;border-radius:8px;">`;
+                btn.style.display = 'none';
+                statusDiv.textContent = '请使用B站APP扫描二维码';
+
+                if (qrPollInterval) clearInterval(qrPollInterval);
+                qrPollInterval = setInterval(async () => {
+                    try {
+                        const r = await fetch(`/login/qrcode/status/${data.session_id}`);
+                        const d = await r.json();
+                        if (d.status === 'done') {
+                            clearInterval(qrPollInterval);
+                            statusDiv.textContent = '登录成功！正在跳转...';
+                            statusDiv.style.color = '#4caf50';
+                            setTimeout(() => window.location.href = '/', 1000);
+                        } else if (d.status === 'scanned') {
+                            statusDiv.textContent = '已扫码，请在手机上确认登录';
+                            statusDiv.style.color = '#2196f3';
+                        } else if (d.status === 'timeout') {
+                            clearInterval(qrPollInterval);
+                            statusDiv.textContent = '二维码已过期，请重新生成';
+                            statusDiv.style.color = '#e53935';
+                            btn.style.display = '';
+                            btn.disabled = false;
+                            btn.textContent = '重新生成';
+                        }
+                    } catch (e) {
+                        // ignore poll errors
+                    }
+                }, 3000);
+            } catch (e) {
+                statusDiv.textContent = '失败: ' + e.message;
+                statusDiv.style.color = '#e53935';
+                btn.disabled = false;
+                btn.textContent = '重试';
+            }
+        }
+    </script>
 </body>
 </html>

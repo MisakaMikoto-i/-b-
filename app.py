@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from parsers import parse_playlist
-from bilibili.auth import load_credential, create_credential_from_manual, clear_credential
+from bilibili.auth import load_credential, save_credential, create_credential_from_manual, clear_credential
 from bilibili.search import search_top_matches
 from bilibili.collector import create_favorite, batch_add_to_favorite, get_user_info
 from parsers.base import Song
@@ -58,6 +58,55 @@ async def login_manual(
         return RedirectResponse("/", status_code=303)
     except Exception as e:
         return JSONResponse({"error": f"登录失败: {str(e)}"}, status_code=400)
+
+
+import base64
+
+qr_login_sessions: dict[str, object] = {}
+
+
+@app.post("/login/qrcode")
+async def login_qrcode():
+    from bilibili_api.login_v2 import QrCodeLogin
+    login = QrCodeLogin()
+    await login.generate_qrcode()
+    pic = login.get_qrcode_picture()
+
+    session_id = str(uuid.uuid4())[:8]
+    qr_login_sessions[session_id] = login
+
+    img_b64 = base64.b64encode(pic.content).decode()
+    return {"session_id": session_id, "image": f"data:image/png;base64,{img_b64}"}
+
+
+@app.get("/login/qrcode/status/{session_id}")
+async def qrcode_status(session_id: str):
+    from bilibili_api.login_v2 import QrCodeLoginEvents
+    login = qr_login_sessions.get(session_id)
+    if not login:
+        return JSONResponse({"error": "会话不存在"}, status_code=404)
+
+    try:
+        state = await login.check_state()
+        print(f"QR [{session_id}] state={state}, has_credential={login.get_credential() is not None}")
+        if state == QrCodeLoginEvents.DONE:
+            cred = login.get_credential()
+            if cred:
+                save_credential(cred)
+                del qr_login_sessions[session_id]
+                return {"status": "done"}
+            else:
+                return {"status": "waiting"}
+        elif state == QrCodeLoginEvents.CONF:
+            return {"status": "scanned"}
+        elif state == QrCodeLoginEvents.TIMEOUT:
+            del qr_login_sessions[session_id]
+            return {"status": "timeout"}
+        else:
+            return {"status": "waiting"}
+    except Exception as e:
+        print(f"QR [{session_id}] error: {e}")
+        return {"status": "error", "detail": str(e)}
 
 
 @app.post("/logout")
