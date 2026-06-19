@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌单转BV收藏夹</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>歌单转BV收藏夹</h1>
+            <p class="subtitle">将主流音乐平台歌单一键转为B站收藏夹</p>
+            <nav>
+                {% if logged_in %}
+                    <span class="user-info">已登录: {{ user_info.get('uname', 'B站用户') }}</span>
+                    <form action="/logout" method="post" style="display:inline">
+                        <button type="submit" class="btn btn-sm">退出</button>
+                    </form>
+                {% else %}
+                    <a href="/login" class="btn btn-primary">登录B站</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <h2>粘贴歌单链接</h2>
+                <p class="hint">支持: 网易云音乐 / QQ音乐 / 酷狗音乐 / 酷我音乐</p>
+                <div class="input-group">
+                    <input type="text" id="playlist-url" placeholder="https://music.163.com/#/playlist?id=XXXXX" autocomplete="off">
+                    <button id="btn-parse" class="btn btn-primary">解析歌单</button>
+                </div>
+                <div id="parse-error" class="error-msg" style="display:none"></div>
+            </section>
+
+            <section id="songs-section" class="songs-section" style="display:none">
+                <h2>歌曲列表 <span id="song-count"></span></h2>
+                <div id="songs-list" class="songs-list"></div>
+                <div class="actions">
+                    <button id="btn-search" class="btn btn-primary">在B站搜索匹配</button>
+                </div>
+            </section>
+
+            <section id="progress-section" class="progress-section" style="display:none">
+                <h2>搜索匹配中</h2>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="fill" style="width:0%"></div>
+                </div>
+                <div id="progress-text" class="progress-text">准备搜索...</div>
+            </section>
+
+            <section id="results-section" class="results-section" style="display:none">
+                <h2>B站匹配结果</h2>
+                <div id="results-list" class="results-list"></div>
+                <div class="collect-form">
+                    <input type="text" id="fav-title" placeholder="收藏夹名称" value="">
+                    <button id="btn-collect" class="btn btn-success">创建收藏夹并添加</button>
+                </div>
+                <div id="collect-progress" class="progress-section" style="display:none">
+                    <div class="progress-bar">
+                        <div id="collect-fill" class="fill" style="width:0%"></div>
+                    </div>
+                    <div id="collect-text" class="progress-text">添加中...</div>
+                </div>
+                <div id="collect-result" class="collect-result" style="display:none"></div>
+            </section>
+        </main>
+    </div>
+    <script src="/static/js/main.js?v=3"></script>
+</body>
+</html>

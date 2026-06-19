@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录B站 - 歌单转BV收藏夹</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="/" style="color:inherit;text-decoration:none">歌单转BV收藏夹</a></h1>
+        </header>
+        <main>
+            <section class="login-section">
+                <h2>登录B站</h2>
+                <p>需要B站登录态才能创建收藏夹和添加视频。凭证仅保存在本地。</p>
+
+                <div class="login-method">
+                    <h3>方式一：手动输入Cookies（推荐）</h3>
+                    <ol>
+                        <li>打开 <a href="https://www.bilibili.com" target="_blank">bilibili.com</a> 并登录</li>
+                        <li>按 F12 打开开发者工具 → Application → Cookies</li>
+                        <li>复制 <code>SESSDATA</code>、<code>bili_jct</code>、<code>buvid3</code> 的值</li>
+                    </ol>
+                    <form action="/login/manual" method="post" class="login-form">
+                        <div class="form-group">
+                            <label>SESSDATA *</label>
+                            <input type="text" name="sessdata" required placeholder="从Cookie中复制">
+                        </div>
+                        <div class="form-group">
+                            <label>bili_jct</label>
+                            <input type="text" name="bili_jct" placeholder="从Cookie中复制">
+                        </div>
+                        <div class="form-group">
+                            <label>buvid3</label>
+                            <input type="text" name="buvid3" placeholder="从Cookie中复制">
+                        </div>
+                        <button type="submit" class="btn btn-primary">登录</button>
+                    </form>
+                </div>
+
+                <div class="login-tip">
+                    <p>⚠️ 请勿泄露你的Cookie信息给他人！</p>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

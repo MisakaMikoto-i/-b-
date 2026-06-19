@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+jinja2
+bilibili-api-python
+aiohttp
+httpx
+python-multipart
+pydantic
