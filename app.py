@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from parsers import parse_playlist
 from bilibili.auth import load_credential, create_credential_from_manual, clear_credential
-from bilibili.search import search_best_match
+from bilibili.search import search_top_matches
 from bilibili.collector import create_favorite, batch_add_to_favorite, get_user_info
 from parsers.base import Song
 from config import BASE_DIR
@@ -108,14 +108,16 @@ async def _run_search(task_id: str):
         nonlocal done_count
         async with sem:
             try:
-                match = await search_best_match(song)
+                matches = await search_top_matches(song, top_n=3)
+                match = matches[0] if matches else None
             except Exception:
+                matches = []
                 match = None
             done_count += 1
             progress["done"] = done_count
             progress["last_song"] = song.name
             progress["last_found"] = match is not None
-            return {"index": idx, "song": song, "match": match}
+            return {"index": idx, "song": song, "match": match, "candidates": matches}
 
     tasks_list = [_search_one(i, s) for i, s in enumerate(songs)]
     all_results = await asyncio.gather(*tasks_list)
@@ -128,6 +130,7 @@ async def _run_search(task_id: str):
         task["results"].append({
             "song": {"name": s.name, "artist": s.artist, "duration": s.duration},
             "match": m,
+            "candidates": r.get("candidates", []),
         })
     task["status"] = "searched"
 
@@ -163,6 +166,83 @@ async def search_results(task_id: str):
     if task["status"] != "searched":
         return JSONResponse({"error": "搜索尚未完成"}, status_code=400)
     return {"results": task["results"]}
+
+
+@app.post("/search/{task_id}/retry")
+async def retry_search(task_id: str, request: Request):
+    task = tasks.get(task_id)
+    if not task:
+        return JSONResponse({"error": "任务不存在"}, status_code=404)
+    if task["status"] != "searched" or not task["results"]:
+        return JSONResponse({"error": "搜索尚未完成"}, status_code=400)
+
+    body = await request.json()
+    idx = body.get("index")
+    keyword = body.get("keyword", "").strip()
+    if idx is None or not keyword:
+        return JSONResponse({"error": "参数缺失"}, status_code=400)
+
+    if idx < 0 or idx >= len(task["results"]):
+        return JSONResponse({"error": "索引越界"}, status_code=400)
+
+    song_data = task["results"][idx]["song"]
+    song = Song(name=keyword, artist=song_data.get("artist", ""), duration=song_data.get("duration", 0))
+
+    try:
+        match = await search_best_match(song)
+    except Exception:
+        match = None
+
+    task["results"][idx]["match"] = match
+    return {"match": match}
+
+
+@app.post("/search/{task_id}/switch")
+async def switch_candidate(task_id: str, request: Request):
+    task = tasks.get(task_id)
+    if not task:
+        return JSONResponse({"error": "任务不存在"}, status_code=404)
+    if task["status"] != "searched" or not task["results"]:
+        return JSONResponse({"error": "搜索尚未完成"}, status_code=400)
+
+    body = await request.json()
+    idx = body.get("index")
+    candidate_idx = body.get("candidate_index", 0)
+    if idx is None:
+        return JSONResponse({"error": "参数缺失"}, status_code=400)
+
+    if idx < 0 or idx >= len(task["results"]):
+        return JSONResponse({"error": "索引越界"}, status_code=400)
+
+    candidates = task["results"][idx].get("candidates", [])
+    if candidate_idx < 0 or candidate_idx >= len(candidates):
+        return JSONResponse({"error": "候选索引越界"}, status_code=400)
+
+    task["results"][idx]["match"] = candidates[candidate_idx]
+    return {"match": candidates[candidate_idx]}
+
+
+@app.post("/verify_bvid")
+async def verify_bvid(request: Request):
+    from bilibili_api import video as bilibili_video
+
+    body = await request.json()
+    bvid = body.get("bvid", "").strip()
+    if not bvid:
+        return JSONResponse({"error": "请输入BV号"}, status_code=400)
+
+    try:
+        v = bilibili_video.Video(bvid=bvid)
+        info = await v.get_info()
+        return {
+            "valid": True,
+            "title": info.get("title", ""),
+            "author": info.get("owner", {}).get("name", ""),
+            "duration": info.get("duration", 0),
+            "aid": info.get("aid", 0),
+        }
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
 
 
 async def _run_collect(task_id: str, media_id: int, aids: list[int], credential):

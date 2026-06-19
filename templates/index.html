@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>歌单转BV收藏夹</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=3">
+    <link rel="stylesheet" href="/static/css/style.css?v=6">
 </head>
 <body>
     <div class="container">
@@ -51,7 +51,14 @@
             </section>
 
             <section id="results-section" class="results-section" style="display:none">
-                <h2>B站匹配结果</h2>
+                <h2>B站匹配结果 <button id="btn-select-all" class="btn btn-sm">取消全选</button></h2>
+                <div class="filter-bar">
+                    <button class="filter-btn active" data-filter="all">全部 <span id="filter-all-count">0</span></button>
+                    <button class="filter-btn" data-filter="problem">需处理 <span id="filter-problem-count">0</span></button>
+                    <button class="filter-btn" data-filter="none">未找到 <span id="filter-none-count">0</span></button>
+                    <button class="filter-btn" data-filter="low">低置信 <span id="filter-low-count">0</span></button>
+                    <button class="filter-btn" data-filter="ok">已匹配 <span id="filter-ok-count">0</span></button>
+                </div>
                 <div id="results-list" class="results-list"></div>
                 <div class="collect-form">
                     <input type="text" id="fav-title" placeholder="收藏夹名称" value="">
@@ -67,6 +74,6 @@
             </section>
         </main>
     </div>
-    <script src="/static/js/main.js?v=3"></script>
+    <script src="/static/js/main.js?v=6"></script>
 </body>
 </html>
