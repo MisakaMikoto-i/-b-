@@ -2,24 +2,21 @@ import re
 import json
 import httpx
 from .base import BaseParser, Song
-from config import QQ_PLAYLIST_API
+
+
+QQ_PLAYLIST_API = "https://c.y.qq.com/qzone/fcg-bin/fcg_ucc_getcdinfo_byids_cp.fcg"
 
 
 class QQParser(BaseParser):
     @staticmethod
     def can_parse(url: str) -> bool:
-        return "y.qq.com" in url or "qq.com" in url and "playlist" in url
+        return "y.qq.com" in url or ("qq.com" in url and "playlist" in url)
 
     @staticmethod
     async def parse(url: str) -> list[Song]:
-        match = re.search(r'id=(\d+)', url)
-        if not match:
-            match = re.search(r'playlist[/#](\d+)', url)
-        if not match:
-            match = re.search(r'/(\d+)\.html', url)
-        if not match:
+        playlist_id = QQParser._extract_id(url)
+        if not playlist_id:
             raise ValueError("无法从URL中提取QQ音乐歌单ID")
-        playlist_id = match.group(1)
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -36,14 +33,19 @@ class QQParser(BaseParser):
             "needNewCode": 0,
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             resp = await client.get(QQ_PLAYLIST_API, params=params, headers=headers, timeout=30)
             resp.raise_for_status()
             text = resp.text
-            if text.startswith("jsonCallback("):
-                text = text[len("jsonCallback("):-1]
-            data = json.loads(text)
 
+        if text.startswith("jsonCallback("):
+            text = text[len("jsonCallback("):]
+            if text.endswith(")"):
+                text = text[:-1]
+            elif text.endswith(");"):
+                text = text[:-2]
+
+        data = json.loads(text)
         cdlist = data.get("cdlist", [])
         if not cdlist:
             raise ValueError("未找到QQ音乐歌单内容")
@@ -66,3 +68,16 @@ class QQParser(BaseParser):
                 )
             )
         return songs
+
+    @staticmethod
+    def _extract_id(url: str) -> str | None:
+        patterns = [
+            r'id=(\d+)',
+            r'playlist[/#](\d+)',
+            r'/(\d+)(?:\.html|$)',
+        ]
+        for p in patterns:
+            m = re.search(p, url)
+            if m:
+                return m.group(1)
+        return None
