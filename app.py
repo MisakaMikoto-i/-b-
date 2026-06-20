@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 
 from parsers import parse_playlist
 from bilibili.auth import load_credential, save_credential, create_credential_from_manual, clear_credential
+from bilibili.auth import load_qq_credential, save_qq_credential, clear_qq_credential
 from bilibili.search import search_top_matches
 from bilibili.collector import create_favorite, batch_add_to_favorite, get_user_info
 from parsers.base import Song
@@ -31,9 +32,11 @@ async def index(request: Request):
         except Exception:
             logged_in = False
             credential = None
+    qq_logged_in = load_qq_credential() is not None
     return templates.TemplateResponse(request, "index.html", {
         "logged_in": logged_in,
         "user_info": user_info,
+        "qq_logged_in": qq_logged_in,
     })
 
 
@@ -115,6 +118,23 @@ async def logout():
     return RedirectResponse("/", status_code=303)
 
 
+@app.post("/login/qq")
+async def login_qq(request: Request):
+    body = await request.json()
+    uin = body.get("uin", "").strip()
+    qqmusic_key = body.get("qqmusic_key", "").strip()
+    if not uin or not qqmusic_key:
+        return JSONResponse({"error": "请输入uin和qqmusic_key"}, status_code=400)
+    save_qq_credential(uin, qqmusic_key)
+    return {"status": "ok"}
+
+
+@app.post("/logout/qq")
+async def logout_qq():
+    clear_qq_credential()
+    return RedirectResponse("/", status_code=303)
+
+
 @app.post("/parse", response_class=JSONResponse)
 async def parse(request: Request):
     body = await request.json()
@@ -123,7 +143,8 @@ async def parse(request: Request):
         return JSONResponse({"error": "请输入歌单链接"}, status_code=400)
 
     try:
-        songs = await parse_playlist(url)
+        qq_cookie = load_qq_credential()
+        songs = await parse_playlist(url, qq_cookie=qq_cookie)
     except Exception as e:
         return JSONResponse({"error": f"解析失败: {str(e)}"}, status_code=400)
 

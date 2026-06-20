@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from bilibili_api import Credential, login_v2
-from config import CREDENTIAL_FILE
+from config import CREDENTIAL_FILE, QQ_CREDENTIAL_FILE
 
 try:
     from bilibili_api import select_client
@@ -62,3 +62,24 @@ def create_credential_from_manual(sessdata: str, bili_jct: str = "", buvid3: str
     cred = Credential(sessdata=sessdata.strip(), bili_jct=bili_jct.strip(), buvid3=buvid3.strip())
     save_credential(cred)
     return cred
+
+
+def load_qq_credential() -> dict | None:
+    if not QQ_CREDENTIAL_FILE.exists():
+        return None
+    data = json.loads(QQ_CREDENTIAL_FILE.read_text(encoding="utf-8"))
+    uin = (data.get("uin") or "").strip()
+    qqmusic_key = (data.get("qqmusic_key") or "").strip()
+    if not uin or not qqmusic_key:
+        return None
+    return {"uin": uin, "qqmusic_key": qqmusic_key}
+
+
+def save_qq_credential(uin: str, qqmusic_key: str):
+    data = {"uin": uin.strip(), "qqmusic_key": qqmusic_key.strip()}
+    QQ_CREDENTIAL_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def clear_qq_credential():
+    if QQ_CREDENTIAL_FILE.exists():
+        QQ_CREDENTIAL_FILE.unlink()

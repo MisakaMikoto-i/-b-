@@ -3,6 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 CREDENTIAL_FILE = BASE_DIR / "credential.json"
+QQ_CREDENTIAL_FILE = BASE_DIR / "qq_credential.json"
 
 BILIBILI_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

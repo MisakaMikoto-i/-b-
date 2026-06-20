@@ -56,6 +56,28 @@
                     <p>⚠️ 请勿泄露你的Cookie信息给他人！</p>
                 </div>
             </section>
+
+            <section class="login-section" style="margin-top: 30px;">
+                <h2>登录QQ音乐（可选）</h2>
+                <p>登录后可访问私有QQ音乐歌单。凭证仅保存在本地。</p>
+                <ol>
+                    <li>打开 <a href="https://y.qq.com" target="_blank">y.qq.com</a> 并登录</li>
+                    <li>按 F12 打开开发者工具 → Application → Cookies</li>
+                    <li>复制 <code>uin</code>（去掉前面的o0）和 <code>qqmusic_key</code> 的值</li>
+                </ol>
+                <form id="qq-login-form" class="login-form" onsubmit="return loginQQ(event)">
+                    <div class="form-group">
+                        <label>uin</label>
+                        <input type="text" id="qq-uin" required placeholder="如: 2259166498">
+                    </div>
+                    <div class="form-group">
+                        <label>qqmusic_key</label>
+                        <input type="text" id="qq-key" required placeholder="从Cookie中复制">
+                    </div>
+                    <button type="submit" class="btn btn-primary">登录QQ音乐</button>
+                    <div id="qq-login-msg" style="margin-top:8px;font-size:0.9em;"></div>
+                </form>
+            </section>
         </main>
     </div>
     <script>
@@ -117,6 +139,30 @@
                 btn.disabled = false;
                 btn.textContent = '重试';
             }
+        }
+
+        async function loginQQ(e) {
+            e.preventDefault();
+            const uin = document.getElementById('qq-uin').value.trim();
+            const key = document.getElementById('qq-key').value.trim();
+            const msg = document.getElementById('qq-login-msg');
+            if (!uin || !key) { msg.textContent = '请填写完整'; msg.style.color = '#e53935'; return false; }
+            try {
+                const resp = await fetch('/login/qq', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({uin, qqmusic_key: key}),
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error);
+                msg.textContent = '登录成功！';
+                msg.style.color = '#4caf50';
+                setTimeout(() => window.location.href = '/', 1000);
+            } catch (e) {
+                msg.textContent = '失败: ' + e.message;
+                msg.style.color = '#e53935';
+            }
+            return false;
         }
     </script>
 </body>

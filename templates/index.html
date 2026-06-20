@@ -13,12 +13,20 @@
             <p class="subtitle">将主流音乐平台歌单一键转为B站收藏夹</p>
             <nav>
                 {% if logged_in %}
-                    <span class="user-info">已登录: {{ user_info.get('uname', 'B站用户') }}</span>
+                    <span class="user-info">B站: {{ user_info.get('uname', '用户') }}</span>
                     <form action="/logout" method="post" style="display:inline">
                         <button type="submit" class="btn btn-sm">退出</button>
                     </form>
                 {% else %}
                     <a href="/login" class="btn btn-primary">登录B站</a>
+                {% endif %}
+                {% if qq_logged_in %}
+                    <span class="user-info" style="margin-left:12px">QQ音乐: 已登录</span>
+                    <form action="/logout/qq" method="post" style="display:inline">
+                        <button type="submit" class="btn btn-sm">退出</button>
+                    </form>
+                {% else %}
+                    <a href="/login" class="btn btn-sm" style="margin-left:12px">登录QQ音乐</a>
                 {% endif %}
             </nav>
         </header>
